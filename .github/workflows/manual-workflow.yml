@@ -1,0 +1,197 @@
+name: Manual Workflow
+
+# This workflow is triggered manually from the GitHub Actions tab
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
+      
+      message:
+        description: 'Custom message for processing'
+        required: false
+        default: 'Hello from GitHub Actions!'
+        type: string
+      
+      enable_debug:
+        description: 'Enable debug mode'
+        required: false
+        default: false
+        type: boolean
+      
+      number_input:
+        description: 'A number for processing'
+        required: false
+        default: '42'
+        type: string
+      
+      base_url:
+        description: 'Base URL for file download'
+        required: false
+        default: 'https://copr.fedorainfracloud.org/coprs/rob72/86Box/repo/fedora-rawhide/rob72-86Box-fedora-rawhide.repo'
+        type: string
+      
+      filename:
+        description: 'Filename to append to the base URL'
+        required: false
+        default: 'README'
+        type: string
+      
+      artifact_storage:
+        description: 'Save file to artifact storage for 7 days'
+        required: false
+        default: false
+        type: boolean
+
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Display input values
+      run: |
+        echo "Environment: ${{ inputs.environment }}"
+        echo "Message: ${{ inputs.message }}"
+        echo "Debug mode: ${{ inputs.enable_debug }}"
+        echo "Number input: ${{ inputs.number_input }}"
+        echo "Base URL: ${{ inputs.base_url }}"
+        echo "Filename: ${{ inputs.filename }}"
+        echo "Artifact storage: ${{ inputs.artifact_storage }}"
+    
+    - name: Environment-specific processing
+      run: |
+        if [ "${{ inputs.environment }}" = "production" ]; then
+          echo "Running production-specific tasks..."
+          # Add your production logic here
+        elif [ "${{ inputs.environment }}" = "staging" ]; then
+          echo "Running staging-specific tasks..."
+          # Add your staging logic here
+        else
+          echo "Running development tasks..."
+          # Add your development logic here
+        fi
+    
+    - name: Debug information (conditional)
+      if: inputs.enable_debug == true
+      run: |
+        echo "Debug mode is enabled"
+        echo "Repository: ${{ github.repository }}"
+        echo "Actor: ${{ github.actor }}"
+        echo "Run ID: ${{ github.run_id }}"
+        echo "Working directory contents:"
+        ls -la
+    
+    - name: Process custom message
+      run: |
+        echo "Processing message: ${{ inputs.message }}"
+        # Add your custom message processing logic here
+    
+    - name: Build download URL and download file
+      run: |
+        # Build the full URL by concatenating base_url and filename
+        BASE_URL="${{ inputs.base_url }}"
+        FILENAME="${{ inputs.filename }}"
+        
+        # Remove trailing slash from base URL if present
+        BASE_URL=$(echo "$BASE_URL" | sed 's#/$##')
+        
+        # Build the full URL
+        FULL_URL="${BASE_URL}/${FILENAME}"
+        
+        echo "Full download URL: $FULL_URL"
+        
+        # Create downloads directory
+        mkdir -p downloads
+        
+        # Download the file with curl
+        echo "Downloading file..."
+        if curl -L -o "downloads/${FILENAME}" "$FULL_URL"; then
+          echo "✅ File downloaded successfully!"
+        else
+          echo "❌ Failed to download file"
+          exit 1
+        fi
+    
+    - name: Verify and process downloaded file
+      run: |
+        FILENAME="${{ inputs.filename }}"
+        DOWNLOADED_FILE="downloads/${FILENAME}"
+        
+        if [ -f "$DOWNLOADED_FILE" ]; then
+          echo "✅ File exists: $DOWNLOADED_FILE"
+          
+          # Show file info
+          echo "File size: $(ls -lh "$DOWNLOADED_FILE" | awk '{print $5}')"
+          echo "File type: $(file "$DOWNLOADED_FILE")"
+          
+          # Show first few lines if it's a text file
+          if file "$DOWNLOADED_FILE" | grep -q "text"; then
+            echo ""
+            echo "First 10 lines of the file:"
+            echo "=========================="
+            head -n 10 "$DOWNLOADED_FILE"
+            echo "=========================="
+          fi
+          
+          # Example processing based on file extension
+          case "${FILENAME##*.}" in
+            json)
+              echo "Processing JSON file..."
+              # Add JSON processing logic here
+              ;;
+            txt|md|README)
+              echo "Processing text file..."
+              WORD_COUNT=$(wc -w < "$DOWNLOADED_FILE")
+              echo "Word count: $WORD_COUNT"
+              ;;
+            zip)
+              echo "Processing ZIP file..."
+              # Add ZIP processing logic here
+              ;;
+            *)
+              echo "Processing generic file..."
+              ;;
+          esac
+          
+        else
+          echo "❌ Downloaded file not found!"
+          exit 1
+        fi
+    
+    - name: Artifact storage decision
+      run: |
+        if [ "${{ inputs.artifact_storage }}" = "true" ]; then
+          echo "📦 Artifact storage is ENABLED - file will be saved as workflow artifact for 7 days"
+        else
+          echo "🚫 Artifact storage is DISABLED - file will not be saved as artifact"
+        fi
+    
+    - name: Upload downloaded file as artifact (optional)
+      if: inputs.artifact_storage == true
+      uses: actions/upload-artifact@v4
+      with:
+        name: downloaded-file-${{ inputs.filename }}
+        path: downloads/${{ inputs.filename }}
+        retention-days: 7
+    
+    # Placeholder for future processing steps
+    - name: Future processing placeholder
+      run: |
+        echo "This is where you can add additional processing steps later"
+        echo "Some ideas for future steps:"
+        echo "- Deploy applications"
+        echo "- Run tests"
+        echo "- Send notifications"
+        echo "- Process data"
+        echo "- Generate reports"
