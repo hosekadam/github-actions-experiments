@@ -55,15 +55,18 @@ jobs:
         UNZIPPED_PATH="goose/goose-${TAG}"
         CARGO_PATH="${UNZIPPED_PATH}/Cargo.toml"
 
-        echo "Cargo path: $CARGO_PATH"
-
-        echo "Original file"
-        cat ${CARGO_PATH}
-
         echo "[workspace.metadata.vendor-filter]
-              platforms = ["*-unknown-linux-gnu"]
-              tier = "2"
+              platforms = [\"*-unknown-linux-gnu\"]
+              tier = \"2\"
               all-features = true" >> ${CARGO_PATH}
+    
+    - name: Install cargo-filterer & run it
+      run: |
+        TAG="${{ inputs.tag }}"
+        UNZIPPED_PATH="goose/goose-${TAG}"
+        cd ${UNZIPPED_PATH}
 
-        echo "Modified file"
-        cat ${CARGO_PATH}
+        echo "current dir: ${pwd}"
+        cargo install cargo-vendor-filterer
+        cargo vendor-filterer --prefix=vendor --format=tar.zstd goose-vendored.tar.zstd
+
