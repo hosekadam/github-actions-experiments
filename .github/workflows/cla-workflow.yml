@@ -61,6 +61,16 @@ jobs:
               platforms = [\"*-unknown-linux-gnu\"]
               tier = \"2\"
               all-features = true" >> ${CARGO_PATH}
+
+    - name: Zip the modified goose source code
+      run: |
+        TAG="${{ inputs.tag }}"
+        UNZIPPED_PATH="goose/goose-${TAG}"
+        OUTPUT_ZIP="goose/v${TAG}.zip"
+        
+        zip -r "${OUTPUT_ZIP}" "${UNZIPPED_PATH}"
+
+        ls -a goose/
     
     - name: Install cargo-filterer & run it
       run: |
@@ -76,11 +86,9 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: |
-          goose/v${{ inputs.tag }}.zip
-          goose/goose-${{ inputs.tag }}/goose-vendored.tar.zstd
+        file: goose/**/*.{zip,zstd}
         tag: v${{ inputs.tag }}
         release_name: "Goose Release v${{ inputs.tag }}"
         overwrite: true
-        file_glob: false
+        file_glob: true
 
