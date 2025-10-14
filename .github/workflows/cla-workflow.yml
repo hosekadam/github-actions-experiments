@@ -12,6 +12,8 @@ on:
 jobs:
   process:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
   
     steps:
     - name: Checkout repository
@@ -69,4 +71,16 @@ jobs:
         echo "current dir: ${pwd}"
         cargo install cargo-vendor-filterer
         cargo vendor-filterer --prefix=vendor --format=tar.zstd goose-vendored.tar.zstd
+
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: |
+          goose/v${{ inputs.tag }}.zip
+          goose/goose-${{ inputs.tag }}/goose-vendored.tar.zstd
+        tag: v${{ inputs.tag }}
+        release_name: "Goose Release v${{ inputs.tag }}"
+        overwrite: true
+        file_glob: false
 
