@@ -1,0 +1,69 @@
+name: Goose workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag of goose release'
+        required: true
+        default: '1.9.0'
+        type: string
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+  
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Download goose in specific tag
+      run: |
+        BASE_URL="https://github.com/block/goose/archive/refs/tags"
+        TAG="${{ inputs.tag }}"
+        FILENAME="v${TAG}.zip"
+        FULL_URL="${BASE_URL}/${FILENAME}"
+
+        echo "Download URL: $FULL_URL"
+
+        mkdir -p goose
+
+        if curl -L -o "goose/${FILENAME}" "$FULL_URL"; then
+          echo "✅ File downloaded successfully!"
+        else
+          echo "❌ Failed to download file"
+          exit 1
+        fi
+
+    - name: Unzip goose
+      run: |
+        TAG="${{ inputs.tag }}"
+        FILENAME_PATH="goose/v${TAG}.zip"
+        UNZIPPED_PATH="goose/"
+
+        if unzip "${FILENAME_PATH}" -d "${UNZIPPED_PATH}"; then
+          echo "✅ File unzipped!"
+        else
+          echo "❌ Failed to unzip file"
+          exit 1
+        fi
+
+
+    - name: Modify goose cargo.toml
+      run: |
+        TAG="${{ inputs.tag }}"
+        UNZIPPED_PATH="goose/goose-${TAG}"
+        CARGO_PATH="${UNZIPPED_PATH}/Cargo.toml"
+
+        echo "Cargo path: $CARGO_PATH"
+
+        echo "Original file"
+        cat ${CARGO_PATH}
+
+        echo "[workspace.metadata.vendor-filter]
+              platforms = ["*-unknown-linux-gnu"]
+              tier = "2"
+              all-features = true" >> ${CARGO_PATH}
+
+        echo "Modified file"
+        cat ${CARGO_PATH}
