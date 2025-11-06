@@ -50,6 +50,15 @@ jobs:
           exit 1
         fi
 
+        rm "${FILENAME_PATH}"
+
+    - name: Info
+      run: |
+        pwd
+        echo "###"
+        ls -a
+        echo "###"
+        ls -a goose/
 
     - name: Modify goose cargo.toml
       run: |
@@ -68,7 +77,8 @@ jobs:
         UNZIPPED_PATH="goose/goose-${TAG}"
         OUTPUT_ZIP="goose/v${TAG}.zip"
         
-        zip -r "${OUTPUT_ZIP}" "${UNZIPPED_PATH}"
+        cd "${UNZIPPED_PATH}"
+        zip -r "${OUTPUT_ZIP}" .
 
         ls -a goose/
     
